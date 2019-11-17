@@ -166,6 +166,7 @@ def install_fake_compilers(config):
 
 
 def report_github_status(repo, token, sha, findings):
+    print("Logging annotations to github ({}, {})".format(repo, sha))
     url = "https://api.github.com/repos/{}/check-runs".format(repo)
     annotations = []
     for path, findings in findings.items():
