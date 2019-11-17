@@ -12,6 +12,8 @@ import re
 import shlex
 import subprocess
 import tempfile
+import requests
+
 
 Finding = collections.namedtuple("Finding", ["line", "text"])
 
@@ -162,6 +164,41 @@ def install_fake_compilers(config):
     # Add the temp directory to our path
     os.environ['PATH'] = tmpdir + ':' + os.environ['PATH']
 
+
+def report_github_status(repo, token, sha, findings):
+    url = "https://api.github.com/repos/{}/check-runs".format(repo)
+    annotations = []
+    for path, findings in findings.items():
+        for f in findings:
+            annotations.append({
+                'path': path,
+                'annotation_level': 'warning',
+                'start_line': f.line,
+                'end_line': f.line,
+                'message': f.text
+            })
+
+    data = {
+        'name': 'clang-tidy',
+        'head_sha': sha,
+        'status': 'completed',
+        'conclusion': 'neutral',
+        'output': {
+            'title': 'clang-tidy',
+            'summary': 'Found {} item'.format(len(annotations)),
+            'annotations': annotations
+        }
+    }
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.antiope-preview+json',
+        'Authorization': 'Bearer {}'.format(token),
+    }
+
+    requests.post(url, data=data, headers=headers)
+
+
 def main():
     args = parse_args()
     config = json.load(args.config)
@@ -196,6 +233,12 @@ def main():
 
     if not any(findings.values()):
         print("clang-tidy did not find a single thing in your code!")
+
+    if 'GITHUB_TOKEN' in os.environ:
+        repo = os.environ['GITHUB_REPOSITORY']
+        sha = os.environ['GITHUB_SHA']
+        token = os.environ['GITHUB_TOKEN']
+        report_github_status(repo, token, sha, findings)
 
 
 if __name__ == '__main__':

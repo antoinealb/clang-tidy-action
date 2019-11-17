@@ -65,7 +65,7 @@ class CleanupCompileCommandsTestCase(unittest.TestCase):
                 "build/obj/hal.o",
                 "../lib/ChibiOS/os/hal/src/hal.c",
                 # TODO(antoinealb): This is only required on my laptop because I did not install clang correctly
-                "-I/Users/antoinealb/.local/arm/arm-none-eabi/include/"
+                "-I~/.local/arm/arm-none-eabi/include/"
 
             ],
             "directory": "/Users/antoinealb/src/cvra/robot-software/can-io-firmware",
