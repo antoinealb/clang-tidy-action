@@ -28,7 +28,7 @@ In order to avoid installing a full toolchain, fake compilers are used.
         "arm-none-eabi-g++",
         "arm-none-eabi-ld",
         "arm-none-eabi-objcopy",
-        "arm-none-eabi-objdump",
+        "arm-none-eabi-objdump"
     ],
     "compilation_commands_sources": [
         {

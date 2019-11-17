@@ -4,14 +4,14 @@ Analyze a repository with clang-tidy.
 """
 
 import argparse
-import contextlib
-import os
-import subprocess
 import collections
-import re
+import contextlib
 import json
-import tempfile
+import os
+import re
 import shlex
+import subprocess
+import tempfile
 
 Finding = collections.namedtuple("Finding", ["line", "text"])
 
@@ -92,7 +92,7 @@ def cleanup_compile_db(compile_db):
                 arguments.append(arg)
 
         # TODO(antoinealb): This is only required on my laptop because I did not install clang correctly
-        arguments.append("-I/Users/antoinealb/.local/arm/arm-none-eabi/include/")
+        arguments.append("-I~/.local/arm/arm-none-eabi/include/")
 
         new_entry = {
             'arguments': arguments,
@@ -134,10 +134,8 @@ def parse_clang_output(output):
     return out
 
 
-def generate_compile_commands(repo_path, config_file):
+def generate_compile_commands(repo_path, config):
     dbs = []
-
-    config = json.load(config_file)
 
     for src in config['compilation_commands_sources']:
         with cd(repo_path):
@@ -148,11 +146,31 @@ def generate_compile_commands(repo_path, config_file):
 
     return merge_compile_commands(*dbs)
 
+
+def install_fake_compilers(config):
+    if "fake_compilers" not in config:
+        return
+
+    tooldir = os.path.abspath(os.path.dirname(__file__))
+    src_file = os.path.join(tooldir, 'fake_compiler.py')
+
+    # TODO: Delete the temp files
+    tmpdir = tempfile.mkdtemp()
+    for cc in config["fake_compilers"]:
+        os.symlink(src_file, os.path.join(tmpdir, cc))
+
+    # Add the temp directory to our path
+    os.environ['PATH'] = tmpdir + ':' + os.environ['PATH']
+
 def main():
     args = parse_args()
+    config = json.load(args.config)
 
-    cleaned_db = generate_compile_commands(args.repository_path, args.config)
+    install_fake_compilers(config)
 
+    cleaned_db = generate_compile_commands(args.repository_path, config)
+
+    # TODO: Delete the temp files
     tmpdir = tempfile.mkdtemp()
     with open(os.path.join(tmpdir, 'compile_commands.json'), 'w') as compile_db_file:
         json.dump(cleaned_db, compile_db_file, indent=2)
@@ -161,7 +179,6 @@ def main():
         files = find_repo_files()
         files = analyzable_files(files)
 
-        files = [s for s in files if any(f['file'].endswith(s) for f in cleaned_db)]
         findings = {}
         for file in files:
             try:
