@@ -177,6 +177,8 @@ def main():
         for finding in findings[file]:
             print("  {}: {}".format(finding.line, finding.text))
 
+    if not any(findings.values()):
+        print("clang-tidy did not find a single thing in your code!")
 
 
 if __name__ == '__main__':
