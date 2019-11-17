@@ -11,6 +11,7 @@ import collections
 import re
 import json
 import tempfile
+import shlex
 
 Finding = collections.namedtuple("Finding", ["line", "text"])
 
@@ -37,6 +38,7 @@ def bold_text():
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repository_path")
+    parser.add_argument("--config", "-c", help="Path to the JSON config file", required=True, type=argparse.FileType())
 
     return parser.parse_args()
 
@@ -132,17 +134,16 @@ def parse_clang_output(output):
     return out
 
 
-# TODO(antoinealb): Make this more general purpose?
-def generate_compile_commands(repo_path):
+def generate_compile_commands(repo_path, config_file):
     dbs = []
 
-    for project in ['can-io-firmware', 'uwb-beacon-firmware', 'master-firmware', 'motor-control-firmware', 'sensor-firmware']:
-        with cd(os.path.join(repo_path, project)):
-            # TODO(antoinealb): See how I want to enable this
-            # subprocess.call("packager".split())
-            subprocess.call("make clean".split())
-            subprocess.call("bear gmake -j4".split())
-            with open('compile_commands.json') as f:
+    config = json.load(config_file)
+
+    for src in config['compilation_commands_sources']:
+        with cd(repo_path):
+            cmd = 'bash -c "{}"'.format(src['command'])
+            subprocess.call(shlex.split(cmd))
+            with open(src['path']) as f:
                 dbs.append(cleanup_compile_db(json.load(f)))
 
     return merge_compile_commands(*dbs)
@@ -150,7 +151,7 @@ def generate_compile_commands(repo_path):
 def main():
     args = parse_args()
 
-    cleaned_db = generate_compile_commands(args.repository_path)
+    cleaned_db = generate_compile_commands(args.repository_path, args.config)
 
     tmpdir = tempfile.mkdtemp()
     with open(os.path.join(tmpdir, 'compile_commands.json'), 'w') as compile_db_file:
