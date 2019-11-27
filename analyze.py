@@ -197,7 +197,10 @@ def report_github_status(repo, token, sha, findings):
         'Authorization': 'Bearer {}'.format(token),
     }
 
-    requests.post(url, data=data, headers=headers)
+    r = requests.post(url, data=data, headers=headers)
+    print("token: '{}'".format(token))
+    print(r)
+    print(r.text)
 
 
 def main():
